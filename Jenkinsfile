@@ -5,7 +5,7 @@ properties([
     pipelineTriggers([cron('H 5 * * 3')]),
 ])
 
-node('linux') {
+node('maven-17') {
     checkout scm
 
     dir("scripts/build") {
@@ -17,18 +17,11 @@ node('linux') {
     }
 
     stage('Generate Javadocs') {
-        withEnv([
-                "PATH+MVN=${tool 'mvn'}/bin",
-                "JAVA_HOME=${tool 'jdk17'}",
-                "PATH+GROOVY=${tool 'groovy'}/bin",
-                "PATH+JAVA=${tool 'jdk17'}/bin",
-        ]) {
-            if (infra.isTrusted()) {
+        if (infra.isTrusted()) {
+            sh './scripts/generate-javadoc.sh'
+        } else {
+            infra.withArtifactCachingProxy(true) {
                 sh './scripts/generate-javadoc.sh'
-            } else {
-                infra.withArtifactCachingProxy(true) {
-                    sh './scripts/generate-javadoc.sh'
-                }
             }
         }
     }
@@ -80,7 +73,6 @@ node('linux') {
                 cat /home/jenkins/.azcopy/*.log > azcopy.log
                 '''
                 archiveArtifacts 'azcopy.log'
-                
             }
         }
     }
